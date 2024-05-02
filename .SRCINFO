@@ -1,0 +1,21 @@
+pkgbase = fur-git
+	pkgdesc = ur helper
+	pkgver = 0.0.0.1.1.1.1.r18.gfac5075dca616595ca35b9d562a1036a94a9f521
+	pkgrel = 1
+	url = https://github.com/themartiancompany/fur
+	arch = any
+	groups = hip
+	groups = hip-git
+	license = AGPL3
+	checkdepends = shellcheck
+	makedepends = make
+	makedepends = curl
+	makedepends = jq
+	depends = git
+	depends = libcrash-bash
+	provides = fur=0.0.0.1.1.1.1.r18.gfac5075dca616595ca35b9d562a1036a94a9f521
+	conflicts = fur
+	source = fur.tar.gz::https://github.com/themartiancompany/fur/archive/refs/heads/main.tar.gz
+	sha256sums = SKIP
+
+pkgname = fur-git
