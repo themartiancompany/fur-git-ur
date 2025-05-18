@@ -27,13 +27,25 @@
 if [[ ! -v "_git" ]]; then
   _git="false"
 fi
+if [[ ! -v "_docs" ]]; then
+  _docs="false"
+fi
 if [[ ! -v "_offline" ]]; then
   _offline="false"
 fi
 # _local=false
+_py="python"
 _proj="hip"
 _pkg=fur
-pkgname="${_pkg}-git"
+pkgbase="${_pkg}-git"
+pkgname=(
+  "${_pkg}-git"
+)
+if [[ "${_docs}" == "true" ]]; then
+  pkgname+=(
+    "${_pkg}-docs-git"
+  )
+fi
 pkgver="0.0.0.1.1.1.1.r18.gfac5075dca616595ca35b9d562a1036a94a9f521"
 pkgrel=1
 _pkgdesc=(
@@ -60,6 +72,11 @@ depends=(
 makedepends=(
   "make"
 )
+if [[ "${_docs}" == "true" ]]; then
+  makedepends+=(
+    "${_py}-docutils"
+  )
+fi
 checkdepends=(
   "shellcheck"
 )
@@ -202,12 +219,33 @@ pkgver() {
 }
 
 package_fur-git() {
+  local \
+    _make_opts=()
+  _make_opts+=(
+    DESTDIR="${pkgdir}"
+    PREFIX="/usr"
+  )
   cd \
     "${_tarname}"
   make \
-    DESTDIR="${pkgdir}" \
-    PREFIX="/usr" \
-    install
+    "${_make_opts[@]}" \
+    install-fur
 }
+
+package_fur-docs-git() {
+  local \
+    _make_opts=()
+  _make_opts+=(
+    DESTDIR="${pkgdir}"
+    PREFIX="/usr"
+  )
+  cd \
+    "${_tarname}"
+  make \
+    "${_make_opts[@]}" \
+    install-doc \
+    install-man
+}
+
 
 # vim: ft=sh syn=sh et
