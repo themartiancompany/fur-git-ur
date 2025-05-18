@@ -1,77 +1,104 @@
 # SPDX-License-Identifier: AGPL-3.0
-#
-# Maintainer:  Truocolo <truocolo@aol.com>
-# Maintainer:  Pellegrino Prevete <pellegrinoprevete@gmail.com>
 
-_git=false
-_local=false
+#    ----------------------------------------------------------------------
+#    Copyright © 2023, 2024, 2025  Pellegrino Prevete
+#
+#    All rights reserved
+#    ----------------------------------------------------------------------
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Maintainer: Truocolo <truocolo@aol.com>
+# Maintainer: Truocolo <truocolo@0x6E5163fC4BFc1511Dbe06bB605cc14a3e462332b>
+# Maintainer: Pellegrino Prevete (dvorak) <pellegrinoprevete@gmail.com>
+# Maintainer: Pellegrino Prevete (dvorak) <dvorak@0x87003Bd6C074C713783df04f36517451fF34CBEf>
+
+if [[ ! -v "_git" ]]; then
+  _git="false"
+fi
+if [[ ! -v "_offline" ]]; then
+  _offline="false"
+fi
+# _local=false
 _proj="hip"
-_pkgname=fur
-pkgname="${_pkgname}-git"
-pkgver="0.0.0.1.1.1.1".r18.g"fac5075dca616595ca35b9d562a1036a94a9f521"
+_pkg=fur
+pkgname="${_pkg}-git"
+pkgver="0.0.0.1.1.1.1.r18.gfac5075dca616595ca35b9d562a1036a94a9f521"
 pkgrel=1
 _pkgdesc=(
-  ""
-  "ur helper"
+  "Ur helper."
 )
 pkgdesc="${_pkgdesc[*]}"
 arch=(
-  any
+  'any'
 )
 _gl="gitlab.com"
 _gh="github.com"
 _host="https://${_gh}"
 _ns='themartiancompany'
-_local="${HOME}/${_pkgname}"
-url="${_host}/${_ns}/${_pkgname}"
-_gh_api="https://api.${_gh}/repos/${_ns}/${_pkgname}"
+_local="${HOME}/${_pkg}"
+url="${_host}/${_ns}/${_pkg}"
+_gh_api="https://api.${_gh}/repos/${_ns}/${_pkg}"
 license=(
-  AGPL3
+  "AGPL3"
 )
 depends=(
-  git
-  libcrash-bash
+  "git"
+  "libcrash-bash"
 )
 makedepends=(
-  make
+  "make"
 )
 checkdepends=(
-  shellcheck
+  "shellcheck"
 )
 optdepends=(
 )
 provides=(
-  "${_pkgname}=${pkgver}"
+  "${_pkg}=${pkgver}"
 )
 conflicts=(
-  "${_pkgname}"
+  "${_pkg}"
 )
 groups=(
  "${_proj}"
  "${_proj}-git"
 )
 _url="${url}"
-[[ "${_local}" == true ]] && \
+[[ "${_offline}" == true ]] && \
   _url="${_local}"
 source=()
 _branch="main"
-[[ "${_git}" == true ]] && \
+_tarname="${_pkg}-${_branch}"
+if [[ "${_git}" == true ]]; then
   makedepends+=(
-    git
-  ) && \
-  source+=(
-    "${_pkgname}-${_branch}::git+${_url}#branch=${_branch}"
+    'git'
   )
-[[ "${_git}" == false ]] && \
+  source+=(
+    "${_tarname}::git+${_url}#branch=${_branch}"
+  )
+elif [[ "${_git}" == false ]]; then
   makedepends+=(
-    curl
-    jq
-  ) && \
-  source+=(
-    "${_pkgname}.tar.gz::${_url}/archive/refs/heads/${_branch}.tar.gz"
+    "curl"
+    "jq"
   )
+  source+=(
+    "${_tarname}.tar.gz::${_url}/archive/refs/heads/${_branch}.tar.gz"
+  )
+fi
 sha256sums=(
-  SKIP
+  "SKIP"
 )
 
 _nth() {
@@ -165,7 +192,7 @@ _git_pkgver() {
 
 pkgver() {
   cd \
-    "${_pkgname}-${_branch}"
+    "${_tarname}"
   if [[ "${_git}" == true ]]; then
     _git_pkgver
   elif [[ "${_git}" == false ]]; then
@@ -173,9 +200,9 @@ pkgver() {
   fi
 }
 
-package() {
+package_fur-git() {
   cd \
-    "${_pkgname}-${_branch}"
+    "${_tarname}"
   make \
     DESTDIR="${pkgdir}" \
     PREFIX="/usr" \
