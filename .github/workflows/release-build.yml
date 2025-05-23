@@ -1406,7 +1406,7 @@ jobs:
       - uses:
           actions/checkout@v3
       - name:
-          Builds the package.
+          Builds the Windows package.
         run: |
           dos2unix \
             "PKGBUILD"
@@ -1461,11 +1461,12 @@ jobs:
         run: |
           echo \
             "::set-output name=version::$( \
+            export \
+              _evmfs="false" && \
             bash \
-              _evmfs="false" \
-              "reallymakepkg/reallymakepkg/recipe-get" \
-                "PKGBUILD" \
-                "pkgver")"
+            "reallymakepkg/reallymakepkg/recipe-get" \
+              "PKGBUILD" \
+              "pkgver")"
         id:
           version
       - name:
