@@ -228,6 +228,7 @@ package_fur-git() {
   _make_opts+=(
     DESTDIR="${pkgdir}"
     PREFIX="/usr"
+    VERBOSE="true"
   )
   cd \
     "${_tarname}"
@@ -251,6 +252,5 @@ package_fur-docs-git() {
     install-doc \
     install-man
 }
-
 
 # vim: ft=sh syn=sh et
