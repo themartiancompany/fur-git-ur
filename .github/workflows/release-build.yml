@@ -661,6 +661,10 @@ jobs:
       - name:
           version
         run: |
+          _evmfs="false" \
+          _git="true" \
+          makepkg \
+            --nobuild
           echo \
             "::set-output name=version::$( \
             _evmfs="false" \
