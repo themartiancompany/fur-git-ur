@@ -861,6 +861,10 @@ jobs:
       - name:
           Installs Inteppacman.
         run: |
+          pacman \
+            -S \
+            --noconfirm \
+            "tree"
           fur \
             -v \
             -p \
