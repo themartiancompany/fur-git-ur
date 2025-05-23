@@ -661,16 +661,18 @@ jobs:
       - name:
           version
         run: |
-          _evmfs="false" \
-          _git="true" \
-          makepkg \
-            --nobuild
+          /entrypoint.sh \
+            _evmfs="false" \
+            _git="true" \
+            makepkg \
+              --nobuild
           echo \
             "::set-output name=version::$( \
-            _evmfs="false" \
-            recipe-get \
-              "PKGBUILD" \
-              "pkgver")"
+              /entrypoint.sh \
+                _evmfs="false" \
+                recipe-get \
+                  "PKGBUILD" \
+                  "pkgver")"
         id:
           version
       - name:
