@@ -665,7 +665,9 @@ jobs:
             _evmfs="false" \
             _git="true" \
             makepkg \
-              --nobuild
+              --nobuild \
+              -df \
+              --skippgpcheck
           echo \
             "::set-output name=version::$( \
               /entrypoint.sh \
