@@ -868,9 +868,9 @@ jobs:
           Installs Inteppacman.
         run: |
           pacman \
-           -S \
-           --noconfirm \
-           "tree"
+            -S \
+            --noconfirm \
+            "tree"
           fur \
             -v \
             -p \
@@ -1352,7 +1352,7 @@ jobs:
           pacman \
             -S \
             --noconfirm \
-            tree
+            "tree"
           fur \
             -v \
             -p \
