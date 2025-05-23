@@ -645,6 +645,7 @@ jobs:
           /entrypoint.sh \
             pacman \
               -Rdd \
+              --noconfirm \
               "fur" || \
               true
           /entrypoint.sh \
@@ -1206,6 +1207,7 @@ jobs:
           #   "$(pwd)"
           pacman \
             -Rdd \
+            --noconfirm \
             "fur" || \
             true
           pacman \
@@ -1345,6 +1347,7 @@ jobs:
         run: |
           pacman \
             -Rdd \
+            --noconfirm \
             "fur" || \
             true
           pacman \
