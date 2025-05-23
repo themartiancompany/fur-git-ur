@@ -301,7 +301,7 @@ jobs:
               -rf \
               "${HOME}/fur"
       - name:
-          Installs reallymakepkg.
+          Installs Reallymakepkg.
         run: |
           /entrypoint.sh \
             fur \
