@@ -615,49 +615,10 @@ jobs:
           #     "meson"
       - name:
           Builds the package.
-        # run: |
-        #   touch \
-        #     artifact
         run: |
-          # Container info:
-          # /entrypoint.sh \
-          #   echo \
-          #     "OS: $( \
-          #       uname \
-          #         -o)"
-          # /entrypoint.sh \
-          #   echo \
-          #     "Current position in container: $( \
-          #        pwd)"
-          # /entrypoint.sh \
-          #   echo \
-          #     "Root contents: $( \
-          #        pwd)"
-          # /entrypoint.sh \
-          #   echo \
-          #     "Root directory: ${HOME}"
-          # /entrypoint.sh \
-          #   tree \
-          #     -L \
-          #       2 \
-          #     "/"
-          # Installs reallymakepkg with latest fur
-          # /entrypoint.sh \
-          #   mkdir \
-          #     -p \
-          #     "${HOME}/reallymakepkg-fur"
-          # /entrypoint.sh \
-          #   bash \
-          #     "${HOME}/fur-src/fur/fur" \
-          #       -v \
-          #       -p \
-          #         "pacman" \
-          #       -d \
-          #       -o \
-          #         "${HOME}/reallymakepkg-fur" \
-          #       "reallymakepkg"
           /entrypoint.sh \
             _evmfs="false" \
+            _git="true" \
             TERMUX_VERSION=50 \
             reallymakepkg \
               -v \
