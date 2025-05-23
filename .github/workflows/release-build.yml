@@ -1276,24 +1276,6 @@ jobs:
                 x86_64,
               arch:
                 x86_64 }
-          # - { sys:
-          #       mingw32,
-          #     env:
-          #       i686,
-          #     arch:
-          #       i686 }
-          # - { sys:
-          #       ucrt64,
-          #     env:
-          #       ucrt-x86_64,
-          #     arch:
-          #       x86_64 }
-          # - { sys:
-          #       clang64,
-          #     env:
-          #       clang-x86_64,
-          #     arch:
-          #       x86_64 }
     runs-on:
       windows-latest
     defaults:
@@ -1321,32 +1303,31 @@ jobs:
           pacman \
             -Syu \
             --noconfirm
-      # - name:
-      #     Setups an user. This is something which exists on the Ur for a reason.
-      # run: |
-      #   mkdir \
-      #     -p \
-      #     "/home/user/lur"
-      #   useradd \
-      #     user
-      #   chmod \
-      #     700 \
-      #     "/home/user"
-      #   chown \
-      #     -R \
-      #     "user:user" \
-      #     "/home/user"
-      #   chown \
-      #     -R \
-      #     "user:user" \
-      #     "$(pwd)"
       - name:
-          Installs Rust.
+          Installs Reallymakepkg.
         run: |
+          fur \
+            -v \
+            -d \
+            "reallymakepkg"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          tree \
+            "${HOME}"
           pacman \
-            -Ss \
+            -Udd \
             --noconfirm \
-            cargo
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      # - name:
+      #     Installs Rust.
+      #   run: |
+      #     pacman \
+      #       -Ss \
+      #       --noconfirm \
+      #       cargo
       - name:
           Fixes CRLF on Windows.
         run: |
