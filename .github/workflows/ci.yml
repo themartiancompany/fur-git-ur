@@ -644,6 +644,11 @@ jobs:
         run: |
           /entrypoint.sh \
             pacman \
+              -Rdd \
+              "fur" || \
+              true
+          /entrypoint.sh \
+            pacman \
               -Udd \
               --noconfirm \
                 $(find \
@@ -1200,6 +1205,10 @@ jobs:
           #   "/home/user/lur/sequoia-sq/"*".pkg.tar."* \
           #   "$(pwd)"
           pacman \
+            -Rdd \
+            "fur" || \
+            true
+          pacman \
             -Udd \
             --noconfirm \
             $(find \
@@ -1334,6 +1343,10 @@ jobs:
       - name:
           Installs the package.
         run: |
+          pacman \
+            -Rdd \
+            "fur" || \
+            true
           pacman \
             -Udd \
             --noconfirm \
