@@ -26,25 +26,18 @@
 
 
 name:
-  release
+  release-build
 run-name:
   Releases Life and DogeOS packages.
 permissions:
   contents:
     write
-
-# on:
-#   push:
-#     tags:
-#       - '*'
-
 on:
   release:
     types: [published]
 
 jobs:
   # This is what is currently necessary to make termux-docker work with GHA.
-  
   termux_release:
     name:
       Life and DogeOS Android base (Termux) binary packages.
@@ -55,18 +48,6 @@ jobs:
               ubuntu-24.04-arm
             architecture:
               aarch64
-          # - runner:
-          #     ubuntu-24.04
-          #   architecture:
-          #     i686
-          # - runner:
-          #     ubuntu-24.04-arm
-          #   architecture:
-          #     arm
-          # - runner:
-          #     ubuntu-24.04
-          #   architecture:
-          #     x86_64
     runs-on:
       ${{ matrix.runner }}
     # prepare writable volume prefix mount for actions/upload-artifact,
