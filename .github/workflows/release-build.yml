@@ -679,8 +679,13 @@ jobs:
             pacman \
               -Rdd \
               --noconfirm \
-              libcrash-bash \
-              libcrash-bash-docs || \
+              fur || \
+              true
+          /entrypoint.sh \
+            pacman \
+              -Rdd \
+              --noconfirm \
+              fur-docs || \
               true
           /entrypoint.sh \
             pacman \
@@ -1215,8 +1220,12 @@ jobs:
           pacman \
             -Rdd \
             --noconfirm \
-            libcrash-bash \
-            libcrash-bash-docs || \
+            fur || \
+            true
+          pacman \
+            -Rdd \
+            --noconfirm \
+            fur-docs || \
             true
           pacman \
             -Udd \
@@ -1367,7 +1376,12 @@ jobs:
           pacman \
             -Rdd \
             --noconfirm \
-            libcrash-bash || \
+            fur || \
+            true
+          pacman \
+            -Rdd \
+            --noconfirm \
+            fur-docs || \
             true
           pacman \
             -Udd \
