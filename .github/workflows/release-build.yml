@@ -1343,9 +1343,17 @@ jobs:
         run: |
           dos2unix \
             "PKGBUILD"
+          # _evmfs="false" \
+          # PKGEXT='.pkg.tar.xz' \
+          # makepkg \
+          #   -df \
+          #   --nocheck
           _evmfs="false" \
-          PKGEXT='.pkg.tar.xz' \
-          makepkg \
+          reallymakepkg \
+            -v \
+            -w \
+              "${HOME}/fur-git-build" \
+            -- \
             -df \
             --nocheck
           find \
