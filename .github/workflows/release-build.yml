@@ -34,7 +34,8 @@ permissions:
     write
 on:
   release:
-    types: [published]
+    types:
+      [published]
 
 jobs:
   # This is what is currently necessary to make termux-docker work with GHA.
