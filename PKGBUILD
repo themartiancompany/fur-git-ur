@@ -242,6 +242,7 @@ package_fur-docs-git() {
   _make_opts+=(
     DESTDIR="${pkgdir}"
     PREFIX="/usr"
+    VERBOSE="true"
   )
   cd \
     "${_tarname}"
