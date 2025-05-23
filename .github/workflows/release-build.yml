@@ -661,7 +661,7 @@ jobs:
             reallymakepkg \
               -v \
               -w \
-                "${HOME}/libcrash-bash-build" \
+                "${HOME}/fur-git-build" \
               -- \
               -df \
               --nocheck
@@ -700,6 +700,7 @@ jobs:
         run: |
           echo \
             "::set-output name=version::$( \
+            _evmfs="false" \
             recipe-get \
               "PKGBUILD" \
               "pkgver")"
@@ -717,9 +718,9 @@ jobs:
             ${{ github.event.release.upload_url }}
             # ${{ steps.create_release.outputs.upload_url }}
           asset_path:
-            libcrash-bash-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+            fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
           asset_name:
-            dogeos-android-libcrash-bash-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+            dogeos-android-fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
           asset_content_type:
             application/gzip
   arch_release:
@@ -1199,6 +1200,7 @@ jobs:
           export \
             _pkgs=(
             $(_evmfs="false" \
+              _evmfs="false" \
               recipe-get \
                 "PKGBUILD" \
                 "makedepends")
@@ -1212,7 +1214,7 @@ jobs:
         run: |
           su \
             -c \
-              "cd $(pwd) && _evmfs="false" reallymakepkg -v -w '/home/user/libcrash-bash-build' -- -df --nocheck" - \
+              "cd $(pwd) && _evmfs="false" reallymakepkg -v -w '/home/user/fur-git-build' -- -df --nocheck" - \
             "user"
       - name:
           Installs the package.
@@ -1239,6 +1241,7 @@ jobs:
         run: |
           echo \
             "::set-output name=version::$( \
+            _evmfs="false" \
             recipe-get \
               "PKGBUILD" \
               "pkgver")"
@@ -1256,9 +1259,9 @@ jobs:
             ${{ github.event.release.upload_url }}
             # ${{ steps.create_release.outputs.upload_url }}
           asset_path:
-            libcrash-bash-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+            fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
           asset_name:
-            dogeos-gnu-libcrash-bash-${{ steps.version.outputs.version }}-any.pkg.tar.xz
+            dogeos-gnu-fur-git-${{ steps.version.outputs.version }}-any.pkg.tar.xz
           asset_content_type:
             application/gzip
   msys2_release:
@@ -1403,6 +1406,7 @@ jobs:
           echo \
             "::set-output name=version::$( \
             bash \
+              _evmfs="false" \
               "reallymakepkg/reallymakepkg/recipe-get" \
                 "PKGBUILD" \
                 "pkgver")"
@@ -1420,9 +1424,9 @@ jobs:
             ${{ github.event.release.upload_url }}
             # ${{ steps.create_release.outputs.upload_url }}
           asset_path:
-            libcrash-bash-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+            fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
           asset_name:
-            dogeos-windows-libcrash-bash-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+            dogeos-windows-fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
           asset_content_type:
             application/gzip
 

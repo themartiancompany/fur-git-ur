@@ -667,6 +667,7 @@ jobs:
           /entrypoint.sh \
             echo \
               "::set-output name=version::$( \
+              _evmfs="false" \
               recipe-get \
                 "PKGBUILD" \
                 "pkgver")"
@@ -678,7 +679,7 @@ jobs:
           name:
             artifact-${{ matrix.platform }}-${{ matrix.architecture }}
           path:
-            libcrash-bash-${{ steps.version.outputs.version }}-any.pkg.tar.xz
+            fur-git-${{ steps.version.outputs.version }}-any.pkg.tar.xz
       # - name:
       #     Upload Termux package.
       #   uses:
@@ -1222,6 +1223,7 @@ jobs:
         run: |
           echo \
             "::set-output name=version::$( \
+            _evmfs="false" \
             recipe-get \
               "PKGBUILD" \
               "pkgver")"
@@ -1233,7 +1235,7 @@ jobs:
           name:
             artifact-${{ matrix.platform }}-${{ matrix.architecture }}
           path:
-            libcrash-bash-${{ steps.version.outputs.version }}-any.pkg.tar.xz
+            fur-git-${{ steps.version.outputs.version }}-any.pkg.tar.xz
   msys2:
     name:
       Life and DogeOS Windows base packages (CI).
@@ -1363,6 +1365,7 @@ jobs:
           echo \
             "::set-output name=version::$( \
             bash \
+              _evmfs="false" \
               "reallymakepkg/reallymakepkg/recipe-get" \
                 "PKGBUILD" \
                 "pkgver")"
@@ -1374,8 +1377,7 @@ jobs:
           name:
             artifact-${{ matrix.sys }}-${{ matrix.env }}
           path:
-            libcrash-bash-${{ steps.version.outputs.version }}-any.pkg.tar.xz
-
+            fur-git-${{ steps.version.outputs.version }}-any.pkg.tar.xz
   # This is the ideal way termux-docker would work with GHA.
   broken-ideal:
     name:
