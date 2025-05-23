@@ -50,7 +50,7 @@ if [[ "${_docs}" == "true" ]]; then
     "${_pkg}-docs-git"
   )
 fi
-pkgver="0.0.0.1.1.1.1.r18.gfac5075dca616595ca35b9d562a1036a94a9f521"
+pkgver="1.0.0.0.0.0.0.0.0.0.0.0.0.1.1".r0.g"c3992a9889a5180b0de30a6c3d4e70e404817b1a"
 pkgrel=1
 _pkgdesc=(
   "Ur helper."
