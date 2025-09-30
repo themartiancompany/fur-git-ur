@@ -104,26 +104,28 @@ if [[ "${_offline}" == true ]]; then
   _url="${_local}"
 fi
 source=()
+sha256sums=()
 _branch="main"
 _tarname="${_pkg}-${_branch}"
 if [[ "${_git}" == true ]]; then
   makedepends+=(
     'git'
   )
-  source+=(
-    "${_tarname}::git+${_url}#branch=${_branch}"
-  )
+  _src="${_tarname}::git+${_url}#branch=${_branch}"
+  _sum="SKIP"
 elif [[ "${_git}" == false ]]; then
   makedepends+=(
     "curl"
     "jq"
   )
-  source+=(
-    "${_tarname}.tar.gz::${_url}/archive/refs/heads/${_branch}.tar.gz"
-  )
+  _src="${_tarname}.tar.gz::${_url}/archive/refs/heads/${_branch}.tar.gz"
+  _sum="SKIP"
 fi
-sha256sums=(
-  "SKIP"
+source+=(
+  "${_src}"
+)
+sha256sums+=(
+  "${_sum}"
 )
 
 _nth() {
