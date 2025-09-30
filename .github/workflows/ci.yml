@@ -1230,6 +1230,13 @@ jobs:
                 -iname \
                   "*.pkg.tar.*")
       - name:
+          Tests the package.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              evm-chains
+      - name:
           version
         run: |
           echo \
@@ -1370,6 +1377,13 @@ jobs:
                 "$(pwd)" \
                 -iname \
                   "*.pkg.tar.*")
+      - name:
+          Tests the package.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              evm-chains
       - name:
           version
         run: |
