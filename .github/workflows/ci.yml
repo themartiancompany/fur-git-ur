@@ -1232,10 +1232,9 @@ jobs:
       - name:
           Tests the package.
         run: |
-          /entrypoint.sh \
-            fur \
-              -v \
-              evm-chains
+          fur \
+            -v \
+            evm-chains
       - name:
           version
         run: |
@@ -1380,10 +1379,9 @@ jobs:
       - name:
           Tests the package.
         run: |
-          /entrypoint.sh \
-            fur \
-              -v \
-              evm-chains
+          fur \
+            -v \
+            evm-chains
       - name:
           version
         run: |
