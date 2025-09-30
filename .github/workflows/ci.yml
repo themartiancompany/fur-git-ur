@@ -1234,6 +1234,9 @@ jobs:
         run: |
           fur \
             -v \
+            -h
+          fur \
+            -v \
             evm-chains
       - name:
           version
