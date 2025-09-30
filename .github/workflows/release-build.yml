@@ -1,0 +1,1497 @@
+# SPDX-License-Identifier: AGPL-3.0
+
+#
+#    release.yaml
+#
+#    ----------------------------------------------------------------------
+#    Copyright © 2024, 2025 Guilherme Janczak,
+#                           Robert Kirkman,
+#                           Pellegrino Prevete
+#
+#    All rights reserved
+#    ----------------------------------------------------------------------
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+name:
+  release-build
+run-name:
+  Releases Life and DogeOS packages.
+permissions:
+  contents:
+    write
+on:
+  release:
+    types:
+      [published]
+
+jobs:
+  # This is what is currently necessary to make termux-docker work with GHA.
+  termux_release:
+    name:
+      Life and DogeOS Android base (Termux) binary packages.
+    strategy:
+      matrix:
+        include:
+          - runner:
+              ubuntu-24.04-arm
+            architecture:
+              aarch64
+    runs-on:
+      ${{ matrix.runner }}
+    # prepare writable volume prefix mount for actions/upload-artifact,
+    # based on the higher-profile workaround for 32-bit GNU/Linux containers explained here
+    # https://github.com/actions/upload-artifact/issues/616#issuecomment-2350667347
+    container:
+      image:
+        termux/termux-docker:${{ matrix.architecture }}
+      volumes: 
+        - /tmp/node20:/__e/node20
+    # approximate environment variables for actions that can't be forced to use entrypoint.sh
+    env:
+      TERMUX_MAIN_PACKAGE_FORMAT:
+        debian
+      TERMUX_VERSION:
+          50
+      ANDROID_ROOT:
+        /system
+      ANDROID_DATA:
+        /data
+      PREFIX:
+        /data/data/com.termux/files/usr
+      HOME:
+        /data/data/com.termux/files/home
+      PATH:
+        /data/data/com.termux/files/usr/bin
+      TMPDIR:
+        /data/data/com.termux/files/usr/tmp
+      LANG:
+        en_US.UTF-8
+      TZ:
+        UTC
+    steps:
+      - name:
+          Set 'pkg' command to use the packages-cf.termux.dev mirror.
+        run: |
+          ln \
+            -sf \
+            "${PREFIX}/etc/termux/mirrors/default" \
+            "${PREFIX}/etc/termux/chosen_mirrors"
+      - name:
+          Upgrade Termux debian environment.
+        run: |
+          /entrypoint.sh \
+            bash \
+              -c \
+                "yes | pkg upgrade -y"
+      # actions/checkout will "think" that termux's tar binary isn't executable if it doesn't have
+      # executable bit actually set for all users, since even though that permissions restriction
+      # doesn't actually apply to the root user (at least on Android), GitHub Actions' internal
+      # source code doesn't "care" and would refuse to run the binary anyway.
+      # relevant internal source code of GitHub Actions:
+      # https://github.com/actions/toolkit/blob/930c89072712a3aac52d74b23338f00bb0cfcb24/packages/io/src/io-util.ts#L167-L177
+      - name:
+          Fixes executable bit for all binaries in "${PREFIX}/bin" for all users.
+        run: |
+          chmod \
+            -R \
+            "o+x" \
+            "${PREFIX}/bin"
+      - name:
+          Installs bionic-libc NodeJS to force compatibility with actions/checkout and actions/upload-artifact.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "nodejs-lts"
+          ln \
+            -sf \
+            "${PREFIX}/bin" \
+            "/__e/node20/bin"
+      - uses:
+          actions/checkout@v4.2.2
+      - name:
+          Fixes permissions of repository after actions/checkout, which ran as root user, while entrypoint.sh activates system user (1000).
+        run: |
+          chown \
+            -R \
+            "1000:1000" \
+            "$(pwd)"
+      - name:
+          Setup user's home.
+        run: |
+          # Setup home
+          /entrypoint.sh \
+            mkdir \
+              -p \
+              "${HOME}"
+      - name:
+          Installs Python.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "python"
+      - name:
+          Installs Rust.
+        run: |
+          # env 
+          #   _arch="$( \
+          #     uname \
+          #       -m)" \
+          #   export \
+          #     _arch="$( \
+          #       uname \
+          #         -m)" && \
+          #   /entrypoint.sh \
+          #     echo \
+          #       "Architecture: ${_arch}" && \
+          #     if [[ "$(uname -m)" == "armv7l" || \
+          #           "$(uname -m)" == "armv8l" ]]; then \
+          #       _rust="rust-std-armv7-linux-androideabi" \
+          #     fi \
+          #     if [[ "${RUNNER_ARCH}" == "X64" ]]; then \
+          #       _rust="rust" && \
+          #       export \
+          #         _rust="${_rust}" \
+          #     fi \
+          #     if [[ "$(uname -m)" == "i686" || \
+          #           "$(uname -m)" == "aarch64" ]]; then \
+          #       _rust="rust" && \
+          #       export \
+          #         _rust="${_rust}" \
+          #     fi && \
+          /entrypoint.sh \
+            apt \
+              install \
+                -y \
+                "rust" \
+                "rust-std-armv7-linux-androideabi"
+      - name:
+          Installs Git.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "git" \
+                "jq" \
+                "tree"
+      - name:
+          Installs Capnproto.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "capnproto"
+      - name:
+          Installs Pacman.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "pacman" \
+                "termux-keyring" \
+                "tree" \
+                "tsu"
+          # Init keyring
+          /entrypoint.sh \
+            pacman-key \
+              --init
+      - name:
+          Installs Crash Bash Library.
+        run: |
+          /entrypoint.sh git \
+              clone \
+                --branch="libcrash-bash" \
+                --single-branch \
+                --depth=1 \
+                "https://github.com/themartiancompany/fur" \
+                "${HOME}/fur"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs Fur.
+        run: |
+          /entrypoint.sh \
+            git \
+              clone \
+                --branch="fur" \
+                --single-branch \
+                --depth=1 \
+                "https://github.com/themartiancompany/fur" \
+                "${HOME}/fur"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs latest Fur.
+        run: |
+          /entrypoint.sh \
+            git \
+              clone \
+                --branch="main" \
+                --single-branch \
+                --depth=1 \
+                "https://github.com/themartiancompany/fur" \
+                "${HOME}/fur-src"
+      - name:
+          Installs Python Pygments.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "python-pygments"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            tree \
+              "${HOME}"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs Reallymakepkg.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "reallymakepkg"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            tree \
+              "${HOME}"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs 'build essential' ahah.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                binutils \
+                bsdtar \
+                file \
+                build-essential
+      - name:
+          Installs make.
+        run: |
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "make"
+      - name:
+          Installs Python Docutils.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "python-docutils"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs EVM Chains Info.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "evm-chains-info"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs EVM Chains Explorers.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "evm-chains-explorers"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs LibEVM.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "libevm"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs EVM Contracts Tools.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "evm-contracts-tools"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs EVM Wallet.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "evm-wallet"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs Key Gen.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "key-gen"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs EVMFS.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "evmfs"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs Aspe.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "lur"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs Lur.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "lur"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Installs Meson.
+        run: |
+          /entrypoint.sh \
+            fur \
+              -v \
+              -p \
+                "pacman" \
+              -d \
+              "meson"
+          /entrypoint.sh \
+            rm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              "${HOME}/fur/termux/any/"*".pkg.tar."*
+          /entrypoint.sh \
+            rm \
+              -rf \
+              "${HOME}/fur"
+      - name:
+          Setup.
+        run: |
+          # pkg/pip need to be prefixed with /entrypoint.sh
+          # because GHA overrode the entrypoint.
+          /entrypoint.sh \
+            pkg \
+              install \
+                -y \
+                "clang" \
+                "ninja"
+          # This doesn't work
+          # /entrypoint.sh \
+          #   gpg \
+          #     --homedir \
+          #       "/data/data/com.termux/files/usr/etc/pacman.d/gnupg" \
+          #     --recv-keys \
+          #       "998DE27318E867EA976BA877389CEED64573DFCA"
+          # One needs to manually install the
+          # termux-keyring pacman package if
+          # in the Termux Debian environment.
+          # /entrypoint.sh \
+          #   pacman \
+          #     -Sy \
+          #     termux-keyring
+          # /entrypoint.sh \
+          #   pacman-key \
+          #     --init
+          # /entrypoint.sh \
+          #   pip \
+          #     install \
+          #     "meson"
+      - name:
+          Builds the package.
+        run: |
+          /entrypoint.sh \
+            _evmfs="false" \
+            _git="true" \
+            TERMUX_VERSION=50 \
+            reallymakepkg \
+              -v \
+              -w \
+                "${HOME}/fur-git-build" \
+              -u \
+              -- \
+              -df \
+              --nocheck
+          /entrypoint.sh \
+            echo \
+              "Home: ${HOME}"
+          find \
+            "$(pwd)" \
+            -iname \
+              "*.pkg.tar.*"
+      - name:
+          Installs the package.
+        run: |
+          /entrypoint.sh \
+            pacman \
+              -Rdd \
+              --noconfirm \
+              fur || \
+              true
+          /entrypoint.sh \
+            pacman \
+              -Rdd \
+              --noconfirm \
+              fur-docs || \
+              true
+          /entrypoint.sh \
+            pacman \
+              -Udd \
+              --noconfirm \
+              $(find \
+                  "$(pwd)" \
+                  -iname \
+                    "*.pkg.tar.*")
+      - name:
+          version
+        run: |
+          /entrypoint.sh \
+            _evmfs="false" \
+            _git="true" \
+            makepkg \
+              --nobuild \
+              -df \
+              --skippgpcheck
+          echo \
+            "::set-output name=version::$( \
+              /entrypoint.sh \
+                _evmfs="false" \
+                recipe-get \
+                  "PKGBUILD" \
+                  "pkgver")"
+        id:
+          version
+      - name:
+          Upload Termux package.
+        uses:
+          actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN:
+            ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url:
+            ${{ github.event.release.upload_url }}
+            # ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+          asset_name:
+            dogeos-android-fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+          asset_content_type:
+            application/gzip
+  arch_release:
+    name:
+      Life and DogeOS GNU Base (Arch Linux) binary packages.
+    strategy:
+      matrix:
+        include:
+          - runner:
+              ubuntu-24.04
+            platform:
+              gnu
+            platform_target:
+              arch
+            architecture:
+              x86_64
+            container_architecture:
+              amd64
+    runs-on:
+      ${{ matrix.runner }}
+    # prepare writable volume prefix mount
+    # for actions/upload-artifact,
+    # based on the higher-profile workaround
+    # for 32-bit GNU/Linux containers explained here
+    # https://github.com/actions/upload-artifact/issues/616#issuecomment-2350667347
+    container:
+      image:
+        archlinux:base-devel
+      volumes: 
+        - /tmp/node20:/__e/node20
+    # approximate environment variables for actions
+    # that can't be forced to use entrypoint.sh
+    env:
+      # TERMUX_MAIN_PACKAGE_FORMAT:
+      #   debian
+      # ANDROID_ROOT:
+      #   /system
+      # ANDROID_DATA:
+      #   /data
+      PREFIX:
+        /usr
+      # HOME:
+      #   /data/data/com.termux/files/home
+      PATH:
+        /usr/bin
+      # TMPDIR:
+      #   /data/data/com.termux/files/usr/tmp
+      LANG:
+        en_US.UTF-8
+      TZ:
+        UTC
+    steps:
+      - name:
+          Upgrade Arch environment.
+        run: |
+          pacman \
+            -Syu \
+            --noconfirm
+      - name:
+          Installs NodeJS to force compatibility with actions/checkout and actions/upload-artifact.
+        run: |
+          pacman \
+            -S \
+            --noconfirm \
+              "nodejs-lts"
+          ln \
+            -sf \
+            "${PREFIX}/bin" \
+            "/__e/node20/bin"
+      - name:
+          Setups container.
+        run: |
+          pacman \
+            -S \
+            --noconfirm \
+            "git" \
+            "jq" \
+            "python" \
+            "python-docutils" \
+            "tree"
+      - uses:
+          actions/checkout@v4.2.2
+      - name:
+          Fixes executable bit for all binaries in "${PREFIX}/bin" for all users.
+        run: |
+          chmod \
+            -R \
+            "o+x" \
+            "${PREFIX}/bin"
+      - name:
+          Shows info.
+        run: |
+          printf \
+            "%s\n" \
+            "ID: '$(id)'." \
+            "Home: '${HOME}'." \
+            "Current directory: '$(pwd)'." \
+            "Contents of the directory '$(pwd)':"
+          ls \
+            "$(pwd)"
+          tree \
+            -L \
+              2 \
+            "/"
+      - name:
+          Installs Crash Bash Library.
+        run: |
+          git \
+            clone \
+              --branch="libcrash-bash" \
+              --single-branch \
+              --depth=1 \
+              "https://github.com/themartiancompany/fur" \
+              "${HOME}/fur"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Fur.
+        run: |
+          git \
+            clone \
+              --branch="fur" \
+              --single-branch \
+              --depth=1 \
+              "https://github.com/themartiancompany/fur" \
+              "${HOME}/fur"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Inteppacman.
+        run: |
+          pacman \
+            -S \
+            --noconfirm \
+            "tree"
+          fur \
+            -v \
+            -p \
+              "pacman" \
+            -d \
+            "inteppacman"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          tree \
+            "${HOME}"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Reallymakepkg.
+        run: |
+          fur \
+            -v \
+            -d \
+            "reallymakepkg"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          tree \
+            "${HOME}"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Node Run.
+        run: |
+          fur \
+            -v \
+            -d \
+            "node-run"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs LibcrashJS.
+        run: |
+          fur \
+            -v \
+            -d \
+            "libcrash-js"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          tree \
+            "${HOME}"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVM Chains.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evm-chains"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Python AIOEtherscan.
+        run: |
+          fur \
+            -v \
+            -d \
+            "python-aioetherscan"
+          rm \
+            "${HOME}/fur/arch/${{ matrix.architecture }}/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/${{ matrix.architecture }}/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Node Ethers.
+        run: |
+          fur \
+            -v \
+            -d \
+            "nodejs-ethers"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVM Chains Info.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evm-chains-info"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVM Chains Explorers.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evm-chains-explorers"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs LibEVM.
+        run: |
+          fur \
+            -v \
+            -d \
+            "libevm"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVM Wallet.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evm-wallet"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVM Contracts ABI Get.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evm-contracts-abi-get"
+          rm \
+            "${HOME}/fur/arch/${{ matrix.architecture }}/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/${{ matrix.architecture }}/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVM Contracts Tools.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evm-contracts-tools"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Key Gen.
+        run: |
+          fur \
+            -v \
+            -d \
+            "key-gen"
+          rm \
+            "${HOME}/fur/termux/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/termux/any/"*".pkg.tar."*
+            rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs EVMFS.
+        run: |
+          fur \
+            -v \
+            -d \
+            "evmfs"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+          # - name:
+          #     Installs EVM Contracts Source Index.
+          #   run: |
+          #     fur \
+          #       -v \
+          #       -d \
+          #       "evm-contracts-source-index-git"
+          #     rm \
+          #       "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          #     pacman \
+          #       -Udd \
+          #       --noconfirm \
+          #       "${HOME}/fur/arch/any/"*".pkg.tar."*
+          #     rm \
+          #       -rf \
+          #       "${HOME}/fur"
+      - name:
+          Installs Aspe.
+        run: |
+          fur \
+            -v \
+            -d \
+            "aspe"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Lur.
+        run: |
+          fur \
+            -v \
+            -d \
+            "lur"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Ur.
+        run: |
+          fur \
+            -v \
+            -d \
+            "ur"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Setups an user. This is something which exists on the Ur for a reason.
+        run: |
+          mkdir \
+            -p \
+            "/home/user/lur"
+          useradd \
+            user
+          chmod \
+            700 \
+            "/home/user"
+          chown \
+            -R \
+            "user:user" \
+            "/home/user"
+          chown \
+            -R \
+            "user:user" \
+            "$(pwd)"
+      - name:
+          Installs build dependencies.
+        run: |
+          export \
+            _pkgs=(
+            $(_evmfs="false" \
+              _evmfs="false" \
+              recipe-get \
+                "PKGBUILD" \
+                "makedepends")
+          )
+          pacman \
+            -S \
+            --noconfirm \
+            "${_pkgs[@]}"
+      - name:
+          Builds the Arch package.
+        run: |
+          su \
+            -c \
+              "cd $(pwd) && _evmfs="false" reallymakepkg -v -u -w '/home/user/fur-git-build' -- -df --nocheck" - \
+            "user"
+      - name:
+          Installs the package.
+        run: |
+          pacman \
+            -Rdd \
+            --noconfirm \
+            fur || \
+            true
+          pacman \
+            -Rdd \
+            --noconfirm \
+            fur-docs || \
+            true
+          pacman \
+            -Udd \
+            --noconfirm \
+            $(find \
+                "$(pwd)" \
+                -iname \
+                  "*.pkg.tar.*")
+      - name:
+          version
+        run: |
+          echo \
+            "::set-output name=version::$( \
+            _evmfs="false" \
+            recipe-get \
+              "PKGBUILD" \
+              "pkgver")"
+        id:
+          version
+      - name:
+          Upload Arch package.
+        uses:
+          actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN:
+            ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url:
+            ${{ github.event.release.upload_url }}
+            # ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+          asset_name:
+            dogeos-gnu-fur-git-${{ steps.version.outputs.version }}-any.pkg.tar.xz
+          asset_content_type:
+            application/gzip
+  msys2_release:
+    name:
+      Life and DogeOS Windows base packages (CI).
+    strategy:
+      matrix:
+        include:
+          - { sys:
+                mingw64,
+              env:
+                x86_64,
+              arch:
+                x86_64 }
+    runs-on:
+      windows-latest
+    defaults:
+      run:
+        shell:
+          msys2 {0}
+    steps:
+      - uses:
+          msys2/setup-msys2@v2
+        with:
+          msystem:
+            ${{ matrix.sys }}
+          update:
+            true
+          install:
+            base-devel
+            dos2unix
+            git
+            mingw-w64-${{ matrix.env }}-jq
+            mingw-w64-${{ matrix.env }}-gcc
+            python-docutils
+      - name:
+          Upgrade Arch environment.
+        run: |
+          pacman \
+            -Syu \
+            --noconfirm
+      - name:
+          Installs Crash Bash Library.
+        run: |
+          git \
+            clone \
+              --branch="libcrash-bash" \
+              --single-branch \
+              --depth=1 \
+              "https://github.com/themartiancompany/fur" \
+              "${HOME}/fur"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Fur.
+        run: |
+          git \
+            clone \
+              --branch="fur" \
+              --single-branch \
+              --depth=1 \
+              "https://github.com/themartiancompany/fur" \
+              "${HOME}/fur"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Inteppacman.
+        run: |
+          pacman \
+            -S \
+            --noconfirm \
+            "tree"
+          fur \
+            -v \
+            -p \
+              "pacman" \
+            -d \
+            "inteppacman"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          tree \
+            "${HOME}"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      - name:
+          Installs Reallymakepkg.
+        run: |
+          fur \
+            -v \
+            -d \
+            "reallymakepkg"
+          rm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*".sig"
+          tree \
+            "${HOME}"
+          pacman \
+            -Udd \
+            --noconfirm \
+            "${HOME}/fur/arch/any/"*".pkg.tar."*
+          rm \
+            -rf \
+            "${HOME}/fur"
+      # - name:
+      #     Installs Rust.
+      #   run: |
+      #     pacman \
+      #       -Ss \
+      #       --noconfirm \
+      #       cargo
+      - name:
+          Fixes CRLF on Windows.
+        run: |
+          git \
+            config \
+              --global \
+                "core.autocrlf" \
+                "false"
+      - uses:
+          actions/checkout@v3
+      - name:
+          Builds the Windows package.
+        run: |
+          dos2unix \
+            "PKGBUILD"
+          # _evmfs="false" \
+          # PKGEXT='.pkg.tar.xz' \
+          # makepkg \
+          #   -df \
+          #   --nocheck
+          _evmfs="false" \
+          reallymakepkg \
+            -v \
+            -w \
+              "${HOME}/fur-git-build" \
+            -u \
+            -- \
+            -df \
+            --nocheck
+          find \
+            "$(pwd)" \
+            -iname \
+              "*.pkg.tar.*"
+      - name:
+          Installs the package.
+        run: |
+          echo \
+            "env position: $(command -v env)"
+          pacman \
+            -Rdd \
+            --noconfirm \
+            fur || \
+            true
+          pacman \
+            -Rdd \
+            --noconfirm \
+            fur-docs || \
+            true
+          pacman \
+            -Udd \
+            --noconfirm \
+            --overwrite="*" \
+            $(find \
+                "$(pwd)" \
+                -iname \
+                  "*.pkg.tar.*")
+      - name:
+          Gets recipe-get.
+        run: |
+          git \
+            clone \
+              "https://github.com/themartiancompany/reallymakepkg"
+      - name:
+          version
+        run: |
+          echo \
+            "::set-output name=version::$( \
+            export \
+              _evmfs="false" && \
+            bash \
+            "reallymakepkg/reallymakepkg/recipe-get" \
+              "PKGBUILD" \
+              "pkgver")"
+        id:
+          version
+      - name:
+          Upload Windows package.
+        uses:
+          actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN:
+            ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url:
+            ${{ github.event.release.upload_url }}
+            # ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+          asset_name:
+            dogeos-windows-fur-git-${{ steps.version.outputs.version }}-1-any.pkg.tar.xz
+          asset_content_type:
+            application/gzip
+
+  # This is the ideal way termux-docker would work with GHA.
+  broken-ideal:
+    if:
+      false
+    runs-on:
+      ubuntu-latest
+    container:
+      termux/termux-docker:x86_64
+    steps:
+      - name:
+          setup
+        run: |
+          pkg \
+            install \
+              -y \
+              "ninja" \
+              "clang" \
+          pip \
+            install \
+            "meson"
+      - uses:
+          actions/checkout@v3.3.0
+      - name:
+          Builds the package.
+        run:
+          touch \
+            artifact
+      - uses:
+          actions/upload-artifact@v3.1.2
+        if:
+          always()
+        with:
+          name:
+            artifact
+          path:
+            artifact
+ # github.event.release.upload_url 
