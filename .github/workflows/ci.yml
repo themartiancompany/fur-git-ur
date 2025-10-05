@@ -662,7 +662,7 @@ jobs:
           /entrypoint.sh \
             fur \
               -v \
-              evm-chains
+              evm-wallet
       - name:
           version
         run: |
